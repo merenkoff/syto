@@ -1,8 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0b1220,40:132a4a,75:1f6feb,100:58a6ff&height=220&section=header&text=%D0%A1%D0%B8%D1%82%D0%BE&fontSize=72&fontColor=ffffff&fontAlignY=38&desc=Yours%20get%20through.%20Spam%20doesn%27t.&descAlignY=62&descSize=20&descColor=e6edf3&animation=fadeIn" />
-</p>
-<p align="center">
-  <img src="assets/icon/syto-icon-192.png" width="96" alt="Syto icon" />
+  <img src="assets/logo/syto-ink-lockup-transparent.png" width="640" alt="Сито — Свої проходять. Чужі — ні." />
 </p>
 <p align="center">
   <b>Screen · Reject · Auto-reply · Talk back</b>
@@ -14,7 +11,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.x-7F52FF?style=flat-square&logo=kotlin&logoColor=white" />
   <img src="https://img.shields.io/badge/Android-10%2B%20(API%2029)-3DDC84?style=flat-square&logo=android&logoColor=white" />
   <img src="https://img.shields.io/badge/Jetpack-Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" />
-  <img src="https://img.shields.io/badge/Cloud-none-0b1220?style=flat-square" />
+  <img src="https://img.shields.io/badge/Cloud-none-0e1a3c?style=flat-square" />
   <img src="https://img.shields.io/badge/Data-stays%20on%20device-3fb950?style=flat-square" />
   <img src="https://img.shields.io/badge/License-OwnNet%201.1-8b5cf6?style=flat-square" />
 </p>
