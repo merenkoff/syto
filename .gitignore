@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.kotlin/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 gradle-app.setting
@@ -16,6 +17,8 @@ captures/
 local.properties
 *.keystore
 *.jks
+# Except the shared debug keystore (D-009): it is a debug key, not a secret.
+!app/debug.keystore
 keystore.properties
 
 # Build outputs
