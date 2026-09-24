@@ -127,15 +127,19 @@ Be honest about the platform, so nobody wastes a week finding these out:
 
 ## 🗺 Roadmap
 
-| Stage | Scope | Status |
+Voice first: the voice bot is the reason this project exists and the part Android may not allow, so it gets validated before anything else. The plan of record lives in [`docs/PLAN.md`](docs/PLAN.md) (Russian), with one file per phase under [`docs/phases/`](docs/phases/).
+
+| Phase | Scope | Status |
 |---|---|---|
-| 0 | Repo, license, icon, plan | ✅ |
-| 1 | `CallScreeningService` + contact lookup + reject unknown | 🚧 |
-| 2 | SMS auto-reply with throttle and short-code filter | 🔭 |
-| 3 | Room log + Compose UI (rules, history, export) | 🔭 |
-| 4 | `ROLE_DIALER` + `InCallService` auto-answer | 🔭 |
-| 5 | TTS + Vosk + dialog state machine | 🔭 |
-| 6 | Transcript view, per-keyword actions | 🔭 |
+| 0 | Gradle scaffold, CI builds a debug APK, install path to the phone | 🔭 |
+| 1 | Voice spike: auto-answer, TTS to caller, on-device STT, short dialog, go / no-go | 🔭 |
+| 2 | `CallScreeningService` + contact lookup + modes for unknown numbers | 🔭 |
+| 3 | SMS auto-reply with throttle and short-code filter | 🔭 |
+| 4 | Room log + Compose UI (rules, history, export) | 🔭 |
+| 5 | Voice bot v1: Vosk model, languages, dialog rules, transcripts | 🔭 |
+| 6 | Signed release, GitHub Releases, Obtainium | 🔭 |
+
+Order after phase 1 depends on its outcome; see the gate in `docs/phases/phase-1-voice-spike.md`.
 
 ---
 
