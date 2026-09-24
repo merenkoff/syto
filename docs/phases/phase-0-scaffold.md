@@ -183,6 +183,21 @@ Obtainium подписывается на репозиторий и ставит
 
 ## Заметки и находки
 
+- **Локальное окружение на Mac готово (2026-09-24).** Установлена Android Studio, проект открыт, SDK лежит в
+  `~/Library/Android/sdk` (platforms `android-37.0`, Build-Tools 36.0.0, platform-tools с `adb`, NDK нет).
+  `./gradlew assembleDebug` локально — зелёный, 24 с на холодном старте, APK 29,7 МБ, тот же размер, что в CI.
+  Ни одного предупреждения от Gradle/AGP/Kotlin. Единственное сообщение — `Unable to strip … libandroidx.graphics.path.so`:
+  нет NDK, поэтому нативная библиотека кладётся в APK без strip. На debug-сборку не влияет, NDK ставить не нужно.
+- **Уведомление студии «Invalid Gradle JDK configuration found»** — не ошибка. При первом открытии в `.idea/`
+  ещё не было Project JDK, студия сама переключила Gradle JVM на встроенный JetBrains Runtime 25 (`gradleJvm = jbr-25`
+  в `.idea/gradle.xml`). Ничего делать не надо. Gradle 9.6.1 и AGP 9.4 на JDK 25 работают (проверено сборкой выше);
+  в CI по-прежнему Temurin 17 — целевая байткод-версия задана в `compileOptions`, а не JDK, на котором крутится Gradle.
+  Системной Java на Mac нет (`/usr/bin/java` — заглушка), поэтому из терминала нужно `JAVA_HOME` на встроенный JDK:
+  `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
+- Студия при первом синке дописала в `gradle.properties` строку `org.gradle.tooling.parallel=true`
+  (параллельный синк для Gradle 9.4+). Безобидно, оставляем и коммитим, чтобы не висело в diff.
+- `.idea/` и `local.properties` в `.gitignore`, в репозиторий не попадают.
+
 - Облачная сессия не может ни собрать, ни сконфигурировать проект: `dl.google.com` закрыт прокси.
   Любая правка `build.gradle.kts` / `libs.versions.toml` из облака проверяется только пушем и CI.
 - Отсюда правило: из облака — маленькие пуши, смотреть прогон, чинить. Не копить непроверенные изменения.
