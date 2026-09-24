@@ -131,7 +131,7 @@ Voice first: the voice bot is the reason this project exists and the part Androi
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Gradle scaffold, CI builds a debug APK, install path to the phone | 🔭 |
+| 0 | Gradle scaffold, CI builds a debug APK, install path to the phone | 🚧 |
 | 1 | Voice spike: auto-answer, TTS to caller, on-device STT, short dialog, go / no-go | 🔭 |
 | 2 | `CallScreeningService` + contact lookup + modes for unknown numbers | 🔭 |
 | 3 | SMS auto-reply with throttle and short-code filter | 🔭 |
@@ -154,7 +154,11 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 Then open Syto, grant the call-screening role when prompted, and pick a mode for unknown numbers.
 
-Requirements: Android Studio Ladybug or newer, JDK 17, a device running Android 10+.
+Requirements: JDK 17, an Android Studio release that supports AGP 9.4 (the Gradle wrapper and the Android SDK
+components are fetched automatically), a device running Android 10+.
+
+Every push also builds a debug APK in GitHub Actions (**Actions → Build debug APK → Artifacts**).
+All debug builds — CI and local — are signed with the same committed debug keystore, so they install over each other.
 
 ---
 
