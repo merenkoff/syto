@@ -1,6 +1,6 @@
 # Фаза 1 — Голосовой спайк
 
-Статус: ⬜ · Начата: — · Завершена: —
+Статус: 🔄 · Начата: 2026-09-24 · Завершена: —
 
 ## Цель
 
@@ -54,7 +54,7 @@
 
 ### 1.0 — Тестовый стенд
 
-Статус: ⬜
+Статус: 🔄 (часть агента ✅ 2026-09-24; за пользователем — батарея и второй телефон)
 
 **Цель.** Зафиксировать, на чём и как тестируем, чтобы результаты были воспроизводимы.
 
@@ -73,11 +73,17 @@
 
 **DoD.** Раздел «Стенд» заполнен.
 
-**Результат.** —
+**Результат.**
+
+- 2026-09-24. Журнал спайка: `voice/SpikeLog.kt`, файл `filesDir/spike.log`, ротация в `spike.log.1` при 1 МБ,
+  формат `HH:mm:ss.SSS | tag | сообщение`, каждая строка дублируется в logcat с тегом `Syto`
+  (`adb logcat -s Syto`). Экран «Spike log» (кнопка на главном экране): последние 200 строк, Refresh, Share
+  (`ACTION_SEND` через `FileProvider`, без сети), Clear.
+- Стенд заполнен, кроме второго телефона.
 
 ### 1.1 — Автоответ
 
-Статус: ⬜
+Статус: 🔄 (код написан и стоит на телефоне 2026-09-24, чек-лист за пользователем)
 
 **Цель.** Проверить H1: приложение снимает трубку само.
 
@@ -102,7 +108,22 @@
 
 **DoD.** ≥ 19/20 автоответов, журнал содержит цепочку RINGING → ACTIVE → DISCONNECTED.
 
-**Результат.** —
+**Результат.**
+
+- 2026-09-24, Mac. Реализовано и поставлено на realme (локальная сборка, `versionName` 0.2.0):
+  - Главный экран переписан: статус «Default dialer» + кнопка запроса роли через `RoleManager.createRequestRoleIntent(ROLE_DIALER)`;
+    статус разрешений `READ_CONTACTS` + `READ_PHONE_STATE` + кнопка запроса; тумблер «Test mode: answer every call»;
+    задержка ответа «Answer after N s» (по умолчанию 2 с); кнопка «Spike log». Сборочная информация ушла вниз.
+  - `voice/SytoInCallService`: в `onCallAdded` пишет номер, направление, состояние и результат поиска по контактам
+    (`ContactsLookup`, `PhoneLookup`); показывает `InCallActivity`; для входящего в `RINGING` планирует `answer()`
+    через N с, если тумблер включён или номер не в контактах. Если нет разрешения на контакты — считает номер незнакомым
+    и пишет это в лог. Все `onStateChanged`, причина разрыва и маршрут аудио (`onCallAudioStateChanged`) — в журнал.
+  - `voice/InCallActivity` + `ui/InCallScreen`: номер, «In contacts / Unknown number», состояние, кнопки Answer / Reject / Hang up.
+    Показывается поверх экрана блокировки. Закрывается, когда звонок убран.
+  - Манифест: `InCallService` с `IN_CALL_SERVICE_UI=true`, `IN_CALL_SERVICE_RINGING=false`, permission `BIND_INCALL_SERVICE`;
+    у `MainActivity` intent-filter'ы `ACTION_DIAL` с `tel:` и без — без них система не предлагает роль звонилки.
+    Исходящие звонки не поддерживаются: по `ACTION_DIAL` показывается тост «используйте системную звонилку».
+- Что не проверено агентом: сам автоответ. Телефон заблокирован PIN, звонить агент не может. Первый живой звонок — за пользователем.
 
 ### 1.2 — Говорить
 
@@ -248,9 +269,10 @@
 
 ## Технические заметки для реализации
 
-- Пакет спайка: `com.ownnet.syto.voice`. Классы: `SytoInCallService`, `CallSession`,
-  `Talker` (TTS), `Listener` (интерфейс, две реализации), `DialogMachine`, `SpikeLog`,
-  `SpikeSettings` (SharedPreferences, никакой базы).
+- Пакет спайка: `com.ownnet.syto.voice`. Есть (1.0–1.1): `SpikeLog`, `SpikeSettings` (SharedPreferences),
+  `ContactsLookup`, `CallRegistry` (текущий `Call` + Compose-состояние для in-call экрана), `SytoInCallService`,
+  `InCallActivity`. Будут (1.2–1.4): `Talker` (TTS), `Listener` (интерфейс, две реализации), `DialogMachine`.
+  Экраны — в `com.ownnet.syto.ui`: `HomeScreen`, `SpikeLogScreen`, `InCallScreen`.
 - Логи — один файл в `filesDir`, ротация по 1 МБ. Формат: `HH:mm:ss.SSS | tag | сообщение`.
 - Никакого `INTERNET`. Vosk-модель — в APK (вариант сборки `withModel`) на время спайка.
 - Manifest: `InCallService` с `android.telecom.IN_CALL_SERVICE_UI = true`,
@@ -259,4 +281,6 @@
 
 ## Заметки и находки
 
-—
+- realme UI гасит экран и держит keyguard; `adb shell input keyevent KEYCODE_WAKEUP` его не будит, `KEYCODE_POWER` будит,
+  но экран блокировки остаётся. Скриншоты через adb на заблокированном телефоне чёрные. Для визуальной проверки
+  пользователь разблокирует телефон сам; агент проверяет по logcat (`adb logcat -s Syto`).

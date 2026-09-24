@@ -26,7 +26,7 @@ android {
         // versionCode stays 1 during development so any build (CI or local) installs over any other
         // without uninstalling. The commit hash below is the real build identity. See D-010.
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0"
 
         buildConfigField("String", "GIT_SHA", "\"${gitSha.get()}\"")
         buildConfigField("String", "BUILD_NUMBER", "\"${buildNumber.get()}\"")
@@ -59,6 +59,7 @@ dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)

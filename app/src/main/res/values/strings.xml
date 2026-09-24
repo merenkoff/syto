@@ -2,9 +2,47 @@
 <resources>
     <string name="app_name">Syto</string>
     <string name="tagline" translatable="false">Свої проходять. Чужі — ні.</string>
+
+    <!-- Build info -->
     <string name="label_version">Version</string>
     <string name="label_commit">Commit</string>
     <string name="label_build">Build</string>
     <string name="label_android">Android</string>
     <string name="label_device">Device</string>
+
+    <!-- Home -->
+    <string name="section_spike">Voice spike</string>
+    <string name="section_build">Build</string>
+    <string name="status_default_dialer">Default dialer</string>
+    <string name="status_permissions">Contacts + phone state</string>
+    <string name="status_yes">yes</string>
+    <string name="status_no">no</string>
+    <string name="status_role_unavailable">role unavailable</string>
+    <string name="status_granted">granted</string>
+    <string name="status_missing">missing</string>
+    <string name="action_request_dialer_role">Make Syto the default dialer</string>
+    <string name="action_request_permissions">Grant permissions</string>
+    <string name="setting_answer_all">Test mode: answer every call</string>
+    <string name="setting_answer_all_hint">Off: answer only numbers not in contacts</string>
+    <string name="setting_answer_delay">Answer after</string>
+    <string name="action_open_log">Spike log</string>
+    <string name="toast_no_outgoing">Syto does not place calls yet. Use the system dialer.</string>
+
+    <!-- Log -->
+    <string name="log_title">Spike log</string>
+    <string name="log_empty">Nothing logged yet.</string>
+    <string name="action_back">Back</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_share">Share</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- In-call -->
+    <string name="incall_incoming">Incoming call</string>
+    <string name="incall_outgoing">Outgoing call</string>
+    <string name="incall_known">In contacts</string>
+    <string name="incall_unknown">Unknown number</string>
+    <string name="incall_no_contacts_permission">Contacts permission missing</string>
+    <string name="incall_answer">Answer</string>
+    <string name="incall_reject">Reject</string>
+    <string name="incall_hang_up">Hang up</string>
 </resources>
