@@ -1,6 +1,8 @@
 package com.ownnet.syto.voice
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.telecom.Call
@@ -8,23 +10,32 @@ import android.telecom.CallAudioState
 import android.telecom.DisconnectCause
 import android.telecom.InCallService
 import android.telecom.VideoProfile
+import java.util.Locale
 
 /**
- * Phase 1.1: bound by telecom while Syto is the default dialer. Answers ringing calls from unknown
- * numbers (or every call in test mode) after a short delay and journals every state change.
+ * Bound by telecom while Syto is the default dialer.
+ * 1.1: answers ringing calls from unknown numbers (or every call in test mode) after a short delay.
+ * 1.2: once the call is active, switches the audio route, speaks the greeting, hangs up after a pause.
+ * Every step goes to the spike journal.
  */
 class SytoInCallService : InCallService() {
     private val handler = Handler(Looper.getMainLooper())
     private val callbacks = HashMap<Call, Call.Callback>()
+    private val greeted = HashSet<Call>()
+    private var talker: Talker? = null
 
     override fun onCreate() {
         super.onCreate()
         SpikeLog.log("svc", "InCallService created")
+        // TTS init is async and takes a few hundred ms; start it now so it is ready by the time we answer.
+        if (SpikeSettings(this).greet) talker = Talker(this, "tts")
     }
 
     override fun onDestroy() {
         SpikeLog.log("svc", "InCallService destroyed")
         handler.removeCallbacksAndMessages(null)
+        talker?.shutdown()
+        talker = null
         super.onDestroy()
     }
 
@@ -44,9 +55,12 @@ class SytoInCallService : InCallService() {
             override fun onStateChanged(call: Call, newState: Int) {
                 SpikeLog.log("call", "state=${stateName(newState)}")
                 CallRegistry.updateState(call, newState)
-                if (newState == Call.STATE_DISCONNECTED) {
-                    val cause = call.details.disconnectCause
-                    SpikeLog.log("call", "disconnect cause=${cause?.let { causeName(it) }} reason=${cause?.reason}")
+                when (newState) {
+                    Call.STATE_ACTIVE -> if (incoming && greeted.add(call)) startGreeting(call)
+                    Call.STATE_DISCONNECTED -> {
+                        val cause = call.details.disconnectCause
+                        SpikeLog.log("call", "disconnect cause=${cause?.let { causeName(it) }} reason=${cause?.reason}")
+                    }
                 }
             }
         }
@@ -75,6 +89,7 @@ class SytoInCallService : InCallService() {
         }
         val delay = settings.answerDelaySec
         SpikeLog.log("auto", "answer scheduled in ${delay}s ($reason)")
+        CallRegistry.note(call, "auto-answer in ${delay}s")
         handler.postDelayed({
             val now = call.currentState()
             if (now == Call.STATE_RINGING) {
@@ -86,10 +101,58 @@ class SytoInCallService : InCallService() {
         }, delay * 1000L)
     }
 
+    /** 1.2: route → greeting → pause → hangup. */
+    private fun startGreeting(call: Call) {
+        val settings = SpikeSettings(this)
+        if (!settings.greet) {
+            SpikeLog.log("greet", "disabled in settings, staying silent")
+            CallRegistry.note(call, "silent (greeting off)")
+            return
+        }
+        val talker = talker ?: Talker(this, "tts").also { talker = it }
+        val route = settings.audioRoute
+        val stream = settings.ttsStream
+        logVolumes()
+        SpikeLog.log("greet", "setAudioRoute(${CallAudioState.audioRouteToString(route)}) then speak on ${Talker.streamName(stream)}")
+        // Deprecated since API 34 (requestCallEndpointChange); still the simplest way to reach SPEAKER on minSdk 29.
+        @Suppress("DEPRECATION")
+        setAudioRoute(route)
+        CallRegistry.note(call, "greeting…")
+
+        handler.postDelayed({
+            if (call.currentState() != Call.STATE_ACTIVE) {
+                SpikeLog.log("greet", "call no longer active, not speaking")
+                return@postDelayed
+            }
+            talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), stream) {
+                val pause = settings.hangupAfterSec
+                SpikeLog.log("greet", "greeting finished, hangup in ${pause}s")
+                CallRegistry.note(call, "listening window ${pause}s, then hangup")
+                handler.postDelayed({
+                    val now = call.currentState()
+                    if (now == Call.STATE_ACTIVE) {
+                        SpikeLog.log("greet", "disconnect()")
+                        call.disconnect()
+                    } else {
+                        SpikeLog.log("greet", "hangup skipped, state=${stateName(now)}")
+                    }
+                }, pause * 1000L)
+            }
+        }, ROUTE_SETTLE_MS)
+    }
+
+    private fun logVolumes() {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        fun v(stream: Int) = "${am.getStreamVolume(stream)}/${am.getStreamMaxVolume(stream)}"
+        SpikeLog.log("audio", "volume VOICE_CALL=${v(AudioManager.STREAM_VOICE_CALL)} MUSIC=${v(AudioManager.STREAM_MUSIC)} mode=${am.mode}")
+    }
+
     override fun onCallRemoved(call: Call) {
         SpikeLog.log("call", "removed")
         callbacks.remove(call)?.let(call::unregisterCallback)
+        greeted.remove(call)
         handler.removeCallbacksAndMessages(null)
+        talker?.stop()
         CallRegistry.clear(call)
     }
 
@@ -115,5 +178,10 @@ class SytoInCallService : InCallService() {
         DisconnectCause.OTHER -> "OTHER"
         DisconnectCause.UNKNOWN -> "UNKNOWN"
         else -> "CODE_${cause.code}"
+    }
+
+    private companion object {
+        /** Give telecom a moment to actually switch the route before TTS starts. */
+        const val ROUTE_SETTLE_MS = 500L
     }
 }

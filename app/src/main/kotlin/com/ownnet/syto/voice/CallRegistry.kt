@@ -13,6 +13,8 @@ data class CallUi(
     /** null = contacts permission missing, lookup skipped. */
     val known: Boolean?,
     val incoming: Boolean,
+    /** What the spike is doing right now, shown under the state. */
+    val note: String = "",
 )
 
 /**
@@ -34,6 +36,10 @@ object CallRegistry {
 
     fun updateState(call: Call, state: Int) {
         if (this.call === call) current = current?.copy(state = state)
+    }
+
+    fun note(call: Call, note: String) {
+        if (this.call === call) current = current?.copy(note = note)
     }
 
     fun clear(call: Call) {

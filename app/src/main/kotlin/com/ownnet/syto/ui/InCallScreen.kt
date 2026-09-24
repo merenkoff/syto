@@ -62,6 +62,13 @@ fun InCallScreen(ui: CallUi, onAnswer: () -> Unit, onHangUp: () -> Unit) {
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (ui.note.isNotEmpty()) {
+                Text(
+                    text = ui.note,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(48.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (ui.state == Call.STATE_RINGING) {

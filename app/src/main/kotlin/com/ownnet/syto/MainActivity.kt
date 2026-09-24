@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -23,10 +24,16 @@ import com.ownnet.syto.ui.SpikeLogScreen
 import com.ownnet.syto.ui.theme.SytoTheme
 import com.ownnet.syto.voice.SpikeLog
 import com.ownnet.syto.voice.SpikeSettings
+import com.ownnet.syto.voice.Talker
+import android.telecom.CallAudioState
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private lateinit var settings: SpikeSettings
-    private var homeState by mutableStateOf(HomeState(false, false, false, false, 0))
+    private var homeState by mutableStateOf(
+        HomeState(false, false, false, false, 0, true, true, true, "", 0),
+    )
+    private var testTalker: Talker? = null
 
     private val roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         refresh()
@@ -76,6 +83,31 @@ class MainActivity : ComponentActivity() {
                             SpikeLog.log("settings", "answerDelaySec=${settings.answerDelaySec}")
                             refresh()
                         },
+                        onGreetChange = {
+                            settings.greet = it
+                            SpikeLog.log("settings", "greet=$it")
+                            refresh()
+                        },
+                        onTtsStreamChange = { voiceCall ->
+                            settings.ttsStream = if (voiceCall) AudioManager.STREAM_VOICE_CALL else AudioManager.STREAM_MUSIC
+                            SpikeLog.log("settings", "ttsStream=${Talker.streamName(settings.ttsStream)}")
+                            refresh()
+                        },
+                        onRouteChange = { speaker ->
+                            settings.audioRoute = if (speaker) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_EARPIECE
+                            SpikeLog.log("settings", "audioRoute=${CallAudioState.audioRouteToString(settings.audioRoute)}")
+                            refresh()
+                        },
+                        onGreetingChange = {
+                            settings.greeting = it
+                            refresh()
+                        },
+                        onHangupAfterChange = {
+                            settings.hangupAfterSec = it
+                            SpikeLog.log("settings", "hangupAfterSec=${settings.hangupAfterSec}")
+                            refresh()
+                        },
+                        onTestGreeting = ::testGreeting,
                         onOpenLog = { screen = SCREEN_LOG },
                     )
                 }
@@ -88,6 +120,21 @@ class MainActivity : ComponentActivity() {
         refresh()
     }
 
+    override fun onDestroy() {
+        testTalker?.shutdown()
+        testTalker = null
+        super.onDestroy()
+    }
+
+    /** Speaks the greeting outside a call on the MUSIC stream: checks the engine and the uk voice. */
+    private fun testGreeting() {
+        SpikeLog.log("tts-test", "test greeting tapped")
+        val talker = testTalker ?: Talker(this, "tts-test").also { testTalker = it }
+        talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), AudioManager.STREAM_MUSIC) {
+            SpikeLog.log("tts-test", "done")
+        }
+    }
+
     private fun refresh() {
         val roleManager = getSystemService(RoleManager::class.java)
         homeState = HomeState(
@@ -98,6 +145,11 @@ class MainActivity : ComponentActivity() {
             },
             answerAll = settings.answerAll,
             answerDelaySec = settings.answerDelaySec,
+            greet = settings.greet,
+            ttsOnVoiceCall = settings.ttsStream == AudioManager.STREAM_VOICE_CALL,
+            routeSpeaker = settings.audioRoute == CallAudioState.ROUTE_SPEAKER,
+            greeting = settings.greeting,
+            hangupAfterSec = settings.hangupAfterSec,
         )
     }
 

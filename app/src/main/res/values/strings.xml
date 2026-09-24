@@ -11,7 +11,7 @@
     <string name="label_device">Device</string>
 
     <!-- Home -->
-    <string name="section_spike">Voice spike</string>
+    <string name="section_spike">1.1 Answer</string>
     <string name="section_build">Build</string>
     <string name="status_default_dialer">Default dialer</string>
     <string name="status_permissions">Contacts + phone state</string>
@@ -25,6 +25,15 @@
     <string name="setting_answer_all">Test mode: answer every call</string>
     <string name="setting_answer_all_hint">Off: answer only numbers not in contacts</string>
     <string name="setting_answer_delay">Answer after</string>
+    <string name="section_speak">1.2 Speak</string>
+    <string name="setting_greet">Greet after answer</string>
+    <string name="setting_greet_hint">Say the greeting, wait, hang up. Off: answer and stay silent.</string>
+    <string name="setting_tts_stream">TTS stream</string>
+    <string name="setting_route">Audio route after answer</string>
+    <string name="setting_hangup_after">Hang up after greeting +</string>
+    <string name="setting_greeting">Greeting (uk)</string>
+    <string name="action_test_greeting">Play greeting now (no call)</string>
+    <string name="section_log">Journal</string>
     <string name="action_open_log">Spike log</string>
     <string name="toast_no_outgoing">Syto does not place calls yet. Use the system dialer.</string>
 

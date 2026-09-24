@@ -144,7 +144,7 @@
 
 ### 1.2 — Говорить
 
-Статус: ⬜
+Статус: 🔄 (код написан и стоит на телефоне 2026-09-24, чек-лист за пользователем)
 
 **Цель.** Проверить H2: абонент слышит бота.
 
@@ -166,7 +166,24 @@
 
 **DoD.** Есть комбинация с ≥ 9/10 разборчивых приветствий. Она записана в «Результат» и становится умолчанием.
 
-**Результат.** —
+**Результат.**
+
+- 2026-09-24, Mac. Реализовано и поставлено на realme:
+  - `voice/Talker`: обёртка над системным `TextToSpeech`. Асинхронный init (запрос до готовности ставится в очередь),
+    `setLanguage(uk)` с логом результата и имени голоса, `AudioAttributes` по потоку
+    (VOICE_CALL → `USAGE_VOICE_COMMUNICATION`, MUSIC → `USAGE_MEDIA`) плюс `KEY_PARAM_STREAM`, громкость 1.0.
+    `onStart` / `onDone` (с длительностью) / `onError` — в журнал.
+  - `SytoInCallService`: TTS инициализируется в `onCreate` сервиса (то есть ещё во время звонка телефона, до ответа).
+    На `ACTIVE` входящего: лог громкостей VOICE_CALL / MUSIC и режима AudioManager → `setAudioRoute(SPEAKER|EARPIECE)` →
+    через 500 мс `speak()` → по `onDone` пауза N с (по умолчанию 8) → `disconnect()`. Все шаги в журнал, на in-call экране
+    подпись «greeting…» / «listening window…».
+  - Настройки на главном экране, секция «1.2 Speak»: тумблер «Greet after answer», сегменты «TTS stream» VOICE_CALL / MUSIC,
+    «Audio route» SPEAKER / EARPIECE, «Hang up after greeting + N s», текст приветствия (по умолчанию из плана, uk),
+    кнопка «Play greeting now (no call)» — проговаривает приветствие на MUSIC без звонка.
+- **Голос uk есть.** На телефоне один движок — Google TTS (`googletts…20260817`). Проверка кнопкой через adb:
+  init 0,65 с, `setLanguage(uk) -> LANG_AVAILABLE`, голос `uk-UA-language`, `onStart` через 0,84 с после `speak()`.
+  Никаких загрузок не понадобилось.
+- Что не проверено: слышно ли приветствие *в трубке у абонента*. Это и есть H2, чек-лист выше.
 
 ### 1.3 — Слышать
 
