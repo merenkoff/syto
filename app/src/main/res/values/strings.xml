@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Syto</string>
+    <string name="tagline" translatable="false">Свої проходять. Чужі — ні.</string>
+    <string name="label_version">Version</string>
+    <string name="label_commit">Commit</string>
+    <string name="label_build">Build</string>
+    <string name="label_android">Android</string>
+    <string name="label_device">Device</string>
+</resources>
