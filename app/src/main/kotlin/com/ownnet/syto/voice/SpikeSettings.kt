@@ -27,10 +27,23 @@ class SpikeSettings(context: Context) {
         get() = prefs.getBoolean(KEY_GREET, true)
         set(value) = prefs.edit().putBoolean(KEY_GREET, value).apply()
 
-    /** AudioManager.STREAM_VOICE_CALL or STREAM_MUSIC for the TTS output. */
+    /**
+     * AudioManager stream for the TTS output: STREAM_VOICE_CALL, STREAM_MUSIC or STREAM_ALARM.
+     * Default MUSIC: on realme the caller heard nothing on VOICE_CALL and something on MUSIC (2026-09-24).
+     */
     var ttsStream: Int
-        get() = prefs.getInt(KEY_TTS_STREAM, AudioManager.STREAM_VOICE_CALL)
+        get() = prefs.getInt(KEY_TTS_STREAM, AudioManager.STREAM_MUSIC)
         set(value) = prefs.edit().putInt(KEY_TTS_STREAM, value).apply()
+
+    /** Raise the TTS stream and the call stream to max while greeting, restore after the call. */
+    var boostVolume: Boolean
+        get() = prefs.getBoolean(KEY_BOOST, true)
+        set(value) = prefs.edit().putBoolean(KEY_BOOST, value).apply()
+
+    /** TextToSpeech speech rate in tenths (10 = 1.0x). Slower speech survives the mic → uplink path better. */
+    var speechRateTenths: Int
+        get() = prefs.getInt(KEY_RATE, DEFAULT_RATE_TENTHS)
+        set(value) = prefs.edit().putInt(KEY_RATE, value.coerceIn(5, 15)).apply()
 
     /** CallAudioState.ROUTE_SPEAKER or ROUTE_EARPIECE requested right after answer. */
     var audioRoute: Int
@@ -50,6 +63,7 @@ class SpikeSettings(context: Context) {
         const val DEFAULT_GREETING = "Це автовідповідач. Розмова записується. Скажіть, хто ви і що потрібно."
         const val DEFAULT_ANSWER_DELAY_SEC = 2
         const val DEFAULT_HANGUP_AFTER_SEC = 8
+        const val DEFAULT_RATE_TENTHS = 9
         const val LANGUAGE_TAG = "uk"
 
         private const val KEY_ANSWER_ALL = "answer_all"
@@ -59,5 +73,7 @@ class SpikeSettings(context: Context) {
         private const val KEY_AUDIO_ROUTE = "audio_route"
         private const val KEY_GREETING = "greeting"
         private const val KEY_HANGUP_AFTER = "hangup_after_sec"
+        private const val KEY_BOOST = "boost_volume"
+        private const val KEY_RATE = "speech_rate_tenths"
     }
 }

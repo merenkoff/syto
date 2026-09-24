@@ -31,7 +31,7 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     private lateinit var settings: SpikeSettings
     private var homeState by mutableStateOf(
-        HomeState(false, false, false, false, 0, true, true, true, "", 0),
+        HomeState(false, false, false, false, 0, true, 1, true, 10, true, "", 0),
     )
     private var testTalker: Talker? = null
 
@@ -49,9 +49,12 @@ class MainActivity : ComponentActivity() {
         settings = SpikeSettings(this)
         enableEdgeToEdge()
         if (intent?.action == Intent.ACTION_DIAL) {
-            // Registered for DIAL only to qualify for ROLE_DIALER. The spike does not place calls.
-            SpikeLog.log("ui", "ACTION_DIAL received, outgoing calls are not supported by the spike")
-            Toast.makeText(this, R.string.toast_no_outgoing, Toast.LENGTH_LONG).show()
+            // Registered for DIAL only to qualify for ROLE_DIALER. The spike does not place calls itself:
+            // hand the request to another dialer so the user does not have to switch roles to make a call.
+            if (forwardDialToSystemDialer(intent)) {
+                finish()
+                return
+            }
         }
         val info = BuildInfo(
             versionName = BuildConfig.VERSION_NAME,
@@ -88,9 +91,19 @@ class MainActivity : ComponentActivity() {
                             SpikeLog.log("settings", "greet=$it")
                             refresh()
                         },
-                        onTtsStreamChange = { voiceCall ->
-                            settings.ttsStream = if (voiceCall) AudioManager.STREAM_VOICE_CALL else AudioManager.STREAM_MUSIC
+                        onTtsStreamChange = { index ->
+                            settings.ttsStream = STREAM_BY_INDEX[index]
                             SpikeLog.log("settings", "ttsStream=${Talker.streamName(settings.ttsStream)}")
+                            refresh()
+                        },
+                        onBoostChange = {
+                            settings.boostVolume = it
+                            SpikeLog.log("settings", "boostVolume=$it")
+                            refresh()
+                        },
+                        onRateChange = {
+                            settings.speechRateTenths = it
+                            SpikeLog.log("settings", "speechRateTenths=${settings.speechRateTenths}")
                             refresh()
                         },
                         onRouteChange = { speaker ->
@@ -115,6 +128,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Opens the same DIAL intent in the first dialer that is not Syto. Returns false if there is none. */
+    private fun forwardDialToSystemDialer(original: Intent): Boolean {
+        val probe = Intent(Intent.ACTION_DIAL, original.data)
+        val target = packageManager.queryIntentActivities(probe, PackageManager.MATCH_DEFAULT_ONLY)
+            .map { it.activityInfo }
+            .firstOrNull { it.packageName != packageName }
+        if (target == null) {
+            SpikeLog.log("ui", "ACTION_DIAL received, no other dialer found")
+            Toast.makeText(this, R.string.toast_no_outgoing, Toast.LENGTH_LONG).show()
+            return false
+        }
+        SpikeLog.log("ui", "ACTION_DIAL data=${original.data} forwarded to ${target.packageName}")
+        startActivity(
+            Intent(Intent.ACTION_DIAL, original.data)
+                .setClassName(target.packageName, target.name)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
         refresh()
@@ -130,7 +163,8 @@ class MainActivity : ComponentActivity() {
     private fun testGreeting() {
         SpikeLog.log("tts-test", "test greeting tapped")
         val talker = testTalker ?: Talker(this, "tts-test").also { testTalker = it }
-        talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), AudioManager.STREAM_MUSIC) {
+        val rate = settings.speechRateTenths / 10f
+        talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), AudioManager.STREAM_MUSIC, rate) {
             SpikeLog.log("tts-test", "done")
         }
     }
@@ -146,7 +180,9 @@ class MainActivity : ComponentActivity() {
             answerAll = settings.answerAll,
             answerDelaySec = settings.answerDelaySec,
             greet = settings.greet,
-            ttsOnVoiceCall = settings.ttsStream == AudioManager.STREAM_VOICE_CALL,
+            ttsStreamIndex = STREAM_BY_INDEX.indexOf(settings.ttsStream).coerceAtLeast(0),
+            boostVolume = settings.boostVolume,
+            speechRateTenths = settings.speechRateTenths,
             routeSpeaker = settings.audioRoute == CallAudioState.ROUTE_SPEAKER,
             greeting = settings.greeting,
             hangupAfterSec = settings.hangupAfterSec,
@@ -162,6 +198,8 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val SCREEN_HOME = "home"
         const val SCREEN_LOG = "log"
+        /** Same order as ui.TTS_STREAMS. */
+        val STREAM_BY_INDEX = listOf(AudioManager.STREAM_VOICE_CALL, AudioManager.STREAM_MUSIC, AudioManager.STREAM_ALARM)
         val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.READ_PHONE_STATE,

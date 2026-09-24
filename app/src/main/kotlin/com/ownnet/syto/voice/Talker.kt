@@ -75,7 +75,7 @@ class Talker(context: Context, private val tag: String) {
      * Speak [text] in [locale] on audio [stream] (AudioManager.STREAM_VOICE_CALL or STREAM_MUSIC).
      * [onDone] fires once on the main thread: after the utterance ends, on error, or if the engine is unusable.
      */
-    fun speak(text: String, locale: Locale, stream: Int, onDone: () -> Unit) {
+    fun speak(text: String, locale: Locale, stream: Int, rate: Float = 1f, onDone: () -> Unit) {
         if (failed) {
             SpikeLog.log(tag, "speak skipped: engine failed")
             onDone()
@@ -83,7 +83,7 @@ class Talker(context: Context, private val tag: String) {
         }
         if (!ready) {
             SpikeLog.log(tag, "engine not ready yet, queueing")
-            pending = { speak(text, locale, stream, onDone) }
+            pending = { speak(text, locale, stream, rate, onDone) }
             return
         }
         pending = null
@@ -95,10 +95,11 @@ class Talker(context: Context, private val tag: String) {
             SpikeLog.log(tag, "language unusable, speaking anyway with engine default")
         }
 
-        val usage = if (stream == AudioManager.STREAM_VOICE_CALL) {
-            AudioAttributes.USAGE_VOICE_COMMUNICATION
-        } else {
-            AudioAttributes.USAGE_MEDIA
+        tts.setSpeechRate(rate)
+        val usage = when (stream) {
+            AudioManager.STREAM_VOICE_CALL -> AudioAttributes.USAGE_VOICE_COMMUNICATION
+            AudioManager.STREAM_ALARM -> AudioAttributes.USAGE_ALARM
+            else -> AudioAttributes.USAGE_MEDIA
         }
         tts.setAudioAttributes(
             AudioAttributes.Builder()
@@ -112,7 +113,7 @@ class Talker(context: Context, private val tag: String) {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f)
         }
         val result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, id)
-        SpikeLog.log(tag, "speak $id stream=${streamName(stream)} result=${if (result == TextToSpeech.SUCCESS) "queued" else "ERROR $result"} text=\"$text\"")
+        SpikeLog.log(tag, "speak $id stream=${streamName(stream)} rate=$rate result=${if (result == TextToSpeech.SUCCESS) "queued" else "ERROR $result"} text=\"$text\"")
         if (result != TextToSpeech.SUCCESS) {
             this.onDone = null
             onDone()
@@ -144,6 +145,7 @@ class Talker(context: Context, private val tag: String) {
         fun streamName(stream: Int) = when (stream) {
             AudioManager.STREAM_VOICE_CALL -> "VOICE_CALL"
             AudioManager.STREAM_MUSIC -> "MUSIC"
+            AudioManager.STREAM_ALARM -> "ALARM"
             else -> "stream $stream"
         }
     }

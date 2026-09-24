@@ -23,6 +23,8 @@ class SytoInCallService : InCallService() {
     private val callbacks = HashMap<Call, Call.Callback>()
     private val greeted = HashSet<Call>()
     private var talker: Talker? = null
+    /** Stream volumes saved before a boost, restored when the call is removed. */
+    private val savedVolumes = HashMap<Int, Int>()
 
     override fun onCreate() {
         super.onCreate()
@@ -36,6 +38,7 @@ class SytoInCallService : InCallService() {
         handler.removeCallbacksAndMessages(null)
         talker?.shutdown()
         talker = null
+        restoreVolumes()
         super.onDestroy()
     }
 
@@ -113,6 +116,7 @@ class SytoInCallService : InCallService() {
         val route = settings.audioRoute
         val stream = settings.ttsStream
         logVolumes()
+        if (settings.boostVolume) boostVolume(stream)
         SpikeLog.log("greet", "setAudioRoute(${CallAudioState.audioRouteToString(route)}) then speak on ${Talker.streamName(stream)}")
         // Deprecated since API 34 (requestCallEndpointChange); still the simplest way to reach SPEAKER on minSdk 29.
         @Suppress("DEPRECATION")
@@ -124,7 +128,8 @@ class SytoInCallService : InCallService() {
                 SpikeLog.log("greet", "call no longer active, not speaking")
                 return@postDelayed
             }
-            talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), stream) {
+            val rate = settings.speechRateTenths / 10f
+            talker.speak(settings.greeting, Locale.forLanguageTag(SpikeSettings.LANGUAGE_TAG), stream, rate) {
                 val pause = settings.hangupAfterSec
                 SpikeLog.log("greet", "greeting finished, hangup in ${pause}s")
                 CallRegistry.note(call, "listening window ${pause}s, then hangup")
@@ -141,10 +146,44 @@ class SytoInCallService : InCallService() {
         }, ROUTE_SETTLE_MS)
     }
 
+    private val audioManager get() = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
     private fun logVolumes() {
-        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val am = audioManager
         fun v(stream: Int) = "${am.getStreamVolume(stream)}/${am.getStreamMaxVolume(stream)}"
-        SpikeLog.log("audio", "volume VOICE_CALL=${v(AudioManager.STREAM_VOICE_CALL)} MUSIC=${v(AudioManager.STREAM_MUSIC)} mode=${am.mode}")
+        SpikeLog.log(
+            "audio",
+            "volume VOICE_CALL=${v(AudioManager.STREAM_VOICE_CALL)} MUSIC=${v(AudioManager.STREAM_MUSIC)} " +
+                "ALARM=${v(AudioManager.STREAM_ALARM)} mode=${am.mode}",
+        )
+    }
+
+    /** Max out the TTS stream and the call stream for the greeting; [restoreVolumes] undoes it. */
+    private fun boostVolume(ttsStream: Int) {
+        val am = audioManager
+        for (stream in setOf(ttsStream, AudioManager.STREAM_VOICE_CALL)) {
+            if (savedVolumes.containsKey(stream)) continue
+            val before = am.getStreamVolume(stream)
+            val max = am.getStreamMaxVolume(stream)
+            try {
+                am.setStreamVolume(stream, max, 0)
+                savedVolumes[stream] = before
+                SpikeLog.log("audio", "boost ${Talker.streamName(stream)} $before -> ${am.getStreamVolume(stream)}/$max")
+            } catch (e: SecurityException) {
+                SpikeLog.log("audio", "boost ${Talker.streamName(stream)} refused: $e")
+            }
+        }
+    }
+
+    private fun restoreVolumes() {
+        if (savedVolumes.isEmpty()) return
+        val am = audioManager
+        for ((stream, volume) in savedVolumes) {
+            runCatching { am.setStreamVolume(stream, volume, 0) }
+                .onFailure { SpikeLog.log("audio", "restore ${Talker.streamName(stream)} failed: $it") }
+        }
+        SpikeLog.log("audio", "volumes restored: ${savedVolumes.entries.joinToString { "${Talker.streamName(it.key)}=${it.value}" }}")
+        savedVolumes.clear()
     }
 
     override fun onCallRemoved(call: Call) {
@@ -153,6 +192,7 @@ class SytoInCallService : InCallService() {
         greeted.remove(call)
         handler.removeCallbacksAndMessages(null)
         talker?.stop()
+        restoreVolumes()
         CallRegistry.clear(call)
     }
 

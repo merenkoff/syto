@@ -38,13 +38,18 @@ data class HomeState(
     val answerAll: Boolean,
     val answerDelaySec: Int,
     val greet: Boolean,
-    /** true = STREAM_VOICE_CALL, false = STREAM_MUSIC */
-    val ttsOnVoiceCall: Boolean,
+    /** Index into [TTS_STREAMS]. */
+    val ttsStreamIndex: Int,
+    val boostVolume: Boolean,
+    val speechRateTenths: Int,
     /** true = ROUTE_SPEAKER, false = ROUTE_EARPIECE */
     val routeSpeaker: Boolean,
     val greeting: String,
     val hangupAfterSec: Int,
 )
+
+/** Labels for the TTS stream choice; MainActivity maps indices to AudioManager constants. */
+val TTS_STREAMS = listOf("VOICE_CALL", "MUSIC", "ALARM")
 
 @Composable
 fun HomeScreen(
@@ -55,7 +60,9 @@ fun HomeScreen(
     onAnswerAllChange: (Boolean) -> Unit,
     onDelayChange: (Int) -> Unit,
     onGreetChange: (Boolean) -> Unit,
-    onTtsStreamChange: (Boolean) -> Unit,
+    onTtsStreamChange: (Int) -> Unit,
+    onBoostChange: (Boolean) -> Unit,
+    onRateChange: (Int) -> Unit,
     onRouteChange: (Boolean) -> Unit,
     onGreetingChange: (String) -> Unit,
     onHangupAfterChange: (Int) -> Unit,
@@ -130,18 +137,30 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
             ChoiceRow(
                 label = stringResource(R.string.setting_tts_stream),
-                first = "VOICE_CALL",
-                second = "MUSIC",
-                firstSelected = state.ttsOnVoiceCall,
+                options = TTS_STREAMS,
+                selected = state.ttsStreamIndex,
                 onChange = onTtsStreamChange,
+            )
+            Spacer(Modifier.height(8.dp))
+            SwitchRow(
+                label = stringResource(R.string.setting_boost),
+                hint = stringResource(R.string.setting_boost_hint),
+                checked = state.boostVolume,
+                onChange = onBoostChange,
+            )
+            Spacer(Modifier.height(8.dp))
+            StepperRow(
+                label = stringResource(R.string.setting_rate),
+                value = state.speechRateTenths,
+                display = "%.1fx".format(state.speechRateTenths / 10f),
+                onChange = onRateChange,
             )
             Spacer(Modifier.height(8.dp))
             ChoiceRow(
                 label = stringResource(R.string.setting_route),
-                first = "SPEAKER",
-                second = "EARPIECE",
-                firstSelected = state.routeSpeaker,
-                onChange = onRouteChange,
+                options = listOf("SPEAKER", "EARPIECE"),
+                selected = if (state.routeSpeaker) 0 else 1,
+                onChange = { onRouteChange(it == 0) },
             )
             Spacer(Modifier.height(8.dp))
             StepperRow(
@@ -221,7 +240,7 @@ private fun SwitchRow(label: String, hint: String, checked: Boolean, onChange: (
 }
 
 @Composable
-private fun StepperRow(label: String, value: Int, onChange: (Int) -> Unit) {
+private fun StepperRow(label: String, value: Int, onChange: (Int) -> Unit, display: String = "$value s") {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = label,
@@ -231,7 +250,7 @@ private fun StepperRow(label: String, value: Int, onChange: (Int) -> Unit) {
         )
         OutlinedButton(onClick = { onChange(value - 1) }) { Text("−") }
         Text(
-            text = "$value s",
+            text = display,
             modifier = Modifier.padding(horizontal = 12.dp),
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
@@ -241,20 +260,17 @@ private fun StepperRow(label: String, value: Int, onChange: (Int) -> Unit) {
 }
 
 @Composable
-private fun ChoiceRow(label: String, first: String, second: String, firstSelected: Boolean, onChange: (Boolean) -> Unit) {
+private fun ChoiceRow(label: String, options: List<String>, selected: Int, onChange: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = firstSelected,
-                onClick = { onChange(true) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) { Text(first, fontFamily = FontFamily.Monospace) }
-            SegmentedButton(
-                selected = !firstSelected,
-                onClick = { onChange(false) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) { Text(second, fontFamily = FontFamily.Monospace) }
+            options.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = index == selected,
+                    onClick = { onChange(index) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                ) { Text(option, fontFamily = FontFamily.Monospace) }
+            }
         }
     }
 }

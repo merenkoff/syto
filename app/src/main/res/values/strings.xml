@@ -29,6 +29,9 @@
     <string name="setting_greet">Greet after answer</string>
     <string name="setting_greet_hint">Say the greeting, wait, hang up. Off: answer and stay silent.</string>
     <string name="setting_tts_stream">TTS stream</string>
+    <string name="setting_boost">Max volume while greeting</string>
+    <string name="setting_boost_hint">TTS stream and call stream to max, restored after the call</string>
+    <string name="setting_rate">Speech rate</string>
     <string name="setting_route">Audio route after answer</string>
     <string name="setting_hangup_after">Hang up after greeting +</string>
     <string name="setting_greeting">Greeting (uk)</string>
